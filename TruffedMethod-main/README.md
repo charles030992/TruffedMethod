@@ -15,9 +15,16 @@ Crear una DApp educativa que permita a la comunidad proponer, votar y ejecutar c
 
 Arquitectura
 ------------
-- Smart contract: Solidity (Hardhat)
+- Smart contract: Solidity `^0.8.28` (Hardhat `^2.27`, Ethers `^6`)
 - Frontend: React + Vite + Wagmi + Viem
 - Chain: Sepolia (puedes cambiar a mainnet sólo después de auditoría)
+
+Contrato principal: `TruffedMethod.sol`
+----------------------------------------
+- `createCompany(ticker, name, sector, metadataURI, initialStatus)` — registra una nueva empresa. `metadataURI` debe apuntar al análisis fundamental (p. ej. IPFS). Emite `CompanyCreated`.
+- `createProposal(companyId, proposedStatus, descriptionURI, duration)` — abre una propuesta para cambiar la clasificación de una empresa, con ventana de votación de `duration` segundos. Emite `ProposalCreated`.
+- `vote(proposalId, support)` — 1 dirección = 1 voto, sí/no. Falla si la votación no ha empezado o ya terminó. Emite `VoteCast`.
+- `executeProposal(proposalId)` — solo tras cerrar la votación; requiere al menos 3 votos (`MIN_VOTES`) y ≥60% de apoyo. Si se cumple, actualiza el `status` de la empresa. Emite `ProposalExecuted`.
 
 Quickstart (local)
 ------------------
@@ -45,9 +52,7 @@ notepad .env
 Backend (Hardhat):
 
 ```bash
-cd .
 npm install
-# Si trabajas con el backend (contratos)
 npx hardhat compile
 npx hardhat test
 ```
@@ -68,7 +73,7 @@ Variables de entorno necesarias
 
 Contrato desplegado (Sepolia)
 ----------------------------
-Dirección desplegada (ejemplo): `0x0f90F732Ab499E9935ef30538A5B4cf570e0ba5B` — verifica en tu entorno y actualiza esta dirección si corresponde.
+Dirección: `0x0f90F732Ab499E9935ef30538A5B4cf570e0ba5B` — verifica en tu entorno y actualiza esta dirección si corresponde.
 
 Seguridad y buenas prácticas
 ----------------------------
@@ -92,7 +97,7 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 
 CI (GitHub Actions)
 --------------------
-Se incluye un workflow de ejemplo en `.github/workflows/ci.yml` que ejecuta tests y build del frontend. Añade los secrets necesarios en GitHub Settings antes de ejecutar.
+Workflow en `.github/workflows/ci.yml` que ejecuta tests de contratos y build del frontend en cada push/PR a `main`. Añade los secrets necesarios en GitHub Settings antes de ejecutarlo.
 
 Checklist para presentación (video)
 ----------------------------------
@@ -100,10 +105,6 @@ Checklist para presentación (video)
 - Demo: conectar wallet, crear empresa, ver la empresa en el listado.
 - Crear propuesta, votar y (si aplica) ejecutar la propuesta y mostrar el cambio on-chain.
 - Mostrar Etherscan txs y dirección del contrato.
-
-Soporte / Contacto
-------------------
-Si quieres, puedo generar el README en inglés además del español, y un guion de vídeo paso a paso.
 
 ---
 
@@ -121,13 +122,20 @@ This repository contains:
 
 Goal
 ----
-Build an educational DApp that allows the community to propose, vote and execute status changes for companies on-chain. Suitable as a final project demo for Alchemy.
+Build an educational DApp that allows the community to propose, vote and execute status changes for companies on-chain. Suitable as a final project demo for Alchemy University's Ethereum Bootcamp.
 
 Architecture
 ------------
-- Smart contract: Solidity (Hardhat)
+- Smart contract: Solidity `^0.8.28` (Hardhat `^2.27`, Ethers `^6`)
 - Frontend: React + Vite + Wagmi + Viem
 - Network: Sepolia (switch to mainnet only after audit)
+
+Core contract: `TruffedMethod.sol`
+------------------------------------
+- `createCompany(ticker, name, sector, metadataURI, initialStatus)` — registers a new company. `metadataURI` should point to the linked fundamental analysis (e.g. IPFS). Emits `CompanyCreated`.
+- `createProposal(companyId, proposedStatus, descriptionURI, duration)` — opens a governance proposal to change a company's classification, with a `duration`-second voting window. Emits `ProposalCreated`.
+- `vote(proposalId, support)` — 1 address = 1 vote, yes/no. Reverts if voting hasn't started or already ended. Emits `VoteCast`.
+- `executeProposal(proposalId)` — only after the voting window closes; requires at least 3 votes (`MIN_VOTES`) and ≥60% support. Updates the company's `status` on success. Emits `ProposalExecuted`.
 
 Quickstart (local)
 ------------------
@@ -176,7 +184,7 @@ Environment variables
 
 Deployed contract (Sepolia)
 --------------------------
-Example deployed address: `0x0f90F732Ab499E9935ef30538A5B4cf570e0ba5B`. Verify and update with your actual deployed address.
+Address: `0x0f90F732Ab499E9935ef30538A5B4cf570e0ba5B` — verify and update with your actual deployed address.
 
 Security Best Practices
 ----------------------
@@ -200,7 +208,7 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 
 CI (GitHub Actions)
 --------------------
-A sample workflow is included in `.github/workflows/ci.yml` that runs contract tests and builds the frontend. Add the required secrets in the GitHub repository settings.
+Workflow at `.github/workflows/ci.yml` runs contract tests and builds the frontend on every push/PR to `main`. Add the required secrets in the GitHub repository settings before running it.
 
 Presentation checklist (video)
 -----------------------------
@@ -209,75 +217,6 @@ Presentation checklist (video)
 - Create a proposal, vote, and (if available) execute the proposal and show the state change on-chain.
 - Show Etherscan transactions and the contract address.
 
-Support
+License
 -------
-If you want, I can also provide an English video script and a readiness checklist for the demo recording.
-
-# Truffed Method
-
-A community-driven governance backend for **value investing & stock classification**.
-
-This project is my final project for the **Alchemy University Ethereum Bootcamp**.  
-The goal is to build a Web3 dApp where a community can:
-
-- Propose stock tickers (e.g. `V`, `AAPL`, `TSLA`) with a linked fundamental analysis (stored off-chain, e.g. IPFS).
-- Vote on the classification of each company as:
-  - **Value Investing** – intrinsically undervalued vs. current market price.
-  - **Trading** – fairly valued, suitable for shorter-term strategies if technical signals align.
-  - **Overvalued** – intrinsic value much lower than current market price.
-- Record the final classification **on-chain** via a simple governance mechanism.
-
-This repo currently contains the **smart contract + tests (backend)**.  
-A frontend (Next.js / Scaffold) will be built on top of this.
-
----
-
-## ✨ Tech Stack
-
-- **Solidity** `^0.8.28`
-- **Hardhat** `^2.27.1`
-- **Ethers** `^6.x` + `@nomicfoundation/hardhat-ethers`
-- **Mocha / Chai** + `@nomicfoundation/hardhat-chai-matchers`
-
----
-
-## 🧠 Core Contract: `TruffedMethod.sol`
-
-The main features:
-
-- `createCompany(ticker, name, sector, metadataURI, initialStatus)`
-  - Creates a new company with:
-    - `ticker` (e.g. `"V"`, `"AAPL"`)
-    - `name`, `sector`
-    - `metadataURI` – e.g. IPFS CID with the full fundamental analysis JSON
-    - `initialStatus` – `ValueInvesting`, `Trading` or `Overvalued`
-  - Stores the creator address as `createdBy`.
-  - Emits `CompanyCreated(companyId, ticker, createdBy)`.
-
-- `createProposal(companyId, proposedStatus, descriptionURI, duration)`
-  - Creates a governance proposal to change the classification of a given company.
-  - Uses `duration` (in seconds) to define the voting window.
-  - Emits `ProposalCreated(proposalId, companyId, proposedStatus)`.
-
-- `vote(proposalId, support)`
-  - 1 address = 1 vote.
-  - A voter can vote **yes** (`support = true`) or **no** (`support = false`).
-  - Reverts if voting has not started or has already ended.
-  - Emits `VoteCast(proposalId, voter, support)`.
-
-- `executeProposal(proposalId)`
-  - Can only be executed **after** the voting period.
-  - Requirements:
-    - At least **3 votes** in total (`MIN_VOTES = 3`).
-    - At least **60%** of votes must be “yes”.
-  - If conditions are met, the company’s `status` is updated to `proposedStatus`.
-  - Emits `ProposalExecuted(proposalId, companyId, newStatus)`.
-
----
-
-## 🧪 Running the Project
-
-### 1. Install Dependencies
-
-```bash
-npm install
+MIT — see `LICENSE`.

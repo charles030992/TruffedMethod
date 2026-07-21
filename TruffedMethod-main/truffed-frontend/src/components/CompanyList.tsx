@@ -23,6 +23,10 @@ export function CompanyList({ refreshSignal }: { refreshSignal?: unknown }) {
     let mounted = true;
 
     async function load() {
+      if (!publicClient) {
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -31,6 +35,7 @@ export function CompanyList({ refreshSignal }: { refreshSignal?: unknown }) {
           address: TRUFFED_METHOD_ADDRESS as `0x${string}`,
           abi: TRUFFED_METHOD_ABI as any,
           functionName: "nextCompanyId",
+          args: [],
         })) as bigint;
 
         const nextCompanyId = Number(nextCompanyIdRaw ?? 0n);
@@ -45,10 +50,11 @@ export function CompanyList({ refreshSignal }: { refreshSignal?: unknown }) {
         }
 
         const ids = Array.from({ length: count }, (_, i) => i + 1);
+        const client = publicClient;
 
         const results = await Promise.all(
           ids.map(async (id) => {
-            const res = (await publicClient.readContract({
+            const res = (await client.readContract({
               address: TRUFFED_METHOD_ADDRESS as `0x${string}`,
               abi: TRUFFED_METHOD_ABI as any,
               functionName: "companies",

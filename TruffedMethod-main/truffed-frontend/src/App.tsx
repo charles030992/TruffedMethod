@@ -1,5 +1,6 @@
 // src/App.tsx
 import "./App.css";
+import { useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { ConnectWallet } from "./components/ConnectWallet";
 import { CreateCompanyForm } from "./components/CreateCompanyForm";

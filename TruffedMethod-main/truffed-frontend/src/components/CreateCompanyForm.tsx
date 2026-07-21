@@ -1,6 +1,7 @@
 // src/components/CreateCompanyForm.tsx
-import { useState, FormEvent } from "react";
-import { useAccount, usePrepareContractWrite, useContractWrite } from "wagmi";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { TRUFFED_METHOD_ADDRESS, TRUFFED_METHOD_ABI } from "../contracts/truffedMethod";
 
 type CompanyStatus = "VALUE" | "TRADING" | "OVERVALUED";
@@ -13,26 +14,25 @@ const STATUS_TO_UINT: Record<CompanyStatus, number> = {
 
 export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
   const { address } = useAccount();
-  const [isPendingLocal, setIsPendingLocal] = useState(false);
-  const [errorLocal, setErrorLocal] = useState<Error | null>(null);
-  const [dataLocal, setDataLocal] = useState<any>(null);
-
-  const prepare = usePrepareContractWrite({
-    address: TRUFFED_METHOD_ADDRESS,
-    abi: TRUFFED_METHOD_ABI as any,
-    functionName: "createCompany",
-    // args will be provided at call time
-    enabled: false,
-  });
-
-  const { writeAsync } = useContractWrite(prepare.config ?? {});
+  const { writeContractAsync, isPending, error } = useWriteContract();
 
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
   const [sector, setSector] = useState("");
   const [metadataURI, setMetadataURI] = useState("");
   const [status, setStatus] = useState<CompanyStatus>("TRADING");
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  useEffect(() => {
+    if (isConfirmed) {
+      onCreate?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConfirmed]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,31 +48,20 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
     }
 
     try {
-      setTxHash(null);
-      setIsPendingLocal(true);
-      setErrorLocal(null);
+      const hash = await writeContractAsync({
+        address: TRUFFED_METHOD_ADDRESS,
+        abi: TRUFFED_METHOD_ABI as any,
+        functionName: "createCompany",
+        args: [
+          ticker.trim().toUpperCase(),
+          name.trim(),
+          sector.trim(),
+          metadataURI.trim(),
+          STATUS_TO_UINT[status],
+        ],
+      });
 
-      const args = [
-        ticker.trim().toUpperCase(),
-        name.trim(),
-        sector.trim(),
-        metadataURI.trim(),
-        STATUS_TO_UINT[status],
-      ];
-
-      const tx = await writeAsync?.({ args });
-
-      // show pending
-      setTxHash(tx?.hash ?? "pending");
-      setDataLocal(tx ?? null);
-
-      // wait for confirmation (optional)
-      if (tx?.wait) {
-        await tx.wait();
-      }
-
-      // callback to parent to trigger refresh
-      onCreate?.();
+      setTxHash(hash);
 
       // Limpiar formulario
       setTicker("");
@@ -80,12 +69,8 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
       setSector("");
       setMetadataURI("");
       setStatus("TRADING");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error creating company:", err);
-      setErrorLocal(err as Error);
-      setTxHash(null);
-    } finally {
-      setIsPendingLocal(false);
     }
   }
 
@@ -176,37 +161,37 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
 
         <button
           type="submit"
-          disabled={isPendingLocal || !address || !writeAsync}
+          disabled={isPending || isConfirming || !address}
           style={{
             marginTop: "0.5rem",
             padding: "0.6rem 1rem",
             borderRadius: "9999px",
             border: "none",
-            cursor: isPendingLocal || !address ? "not-allowed" : "pointer",
-            backgroundColor: isPendingLocal || !address ? "#555" : "#4ade80",
+            cursor: isPending || isConfirming || !address ? "not-allowed" : "pointer",
+            backgroundColor: isPending || isConfirming || !address ? "#555" : "#4ade80",
             color: "#000",
             fontWeight: 600,
           }}
         >
-          {isPendingLocal ? "Sending transaction..." : "Create company"}
+          {isPending ? "Sending transaction..." : isConfirming ? "Confirming..." : "Create company"}
         </button>
       </form>
-      {errorLocal && (
+      {error && (
         <p style={{ marginTop: "0.75rem", color: "#f97373", fontSize: "0.85rem" }}>
-          ⚠ Error: {errorLocal.message}
+          ⚠ Error: {error.message}
         </p>
       )}
 
-      {dataLocal && (
+      {txHash && (
         <p style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
-          ✅ Transaction sent. Check on Etherscan:{" "}
+          {isConfirmed ? "✅ Confirmed" : "⏳ Pending"}. Check on Etherscan:{" "}
           <a
-            href={`https://sepolia.etherscan.io/tx/${dataLocal.hash ?? dataLocal}`}
+            href={`https://sepolia.etherscan.io/tx/${txHash}`}
             target="_blank"
             rel="noreferrer"
             style={{ color: "#60a5fa" }}
           >
-            {(dataLocal.hash ?? String(dataLocal)).slice(0, 10)}...
+            {txHash.slice(0, 10)}...
           </a>
         </p>
       )}
