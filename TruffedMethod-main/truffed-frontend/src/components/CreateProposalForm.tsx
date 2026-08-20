@@ -133,15 +133,27 @@ export function CreateProposalForm({
         </label>
 
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Description URI (link a tu justificación)
+          Description URI (link a tu informe{" "}
+          <a
+            href="https://github.com/charles030992/truffhed-method"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#60a5fa" }}
+          >
+            Truffhed
+          </a>
+          {" "}actualizado)
           <input
             type="text"
             value={descriptionURI}
             onChange={(e) => setDescriptionURI(e.target.value)}
-            placeholder="https://... o ipfs://..."
+            placeholder="https://... o ipfs://... (informe .md que justifica el cambio de estado)"
             style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
           />
         </label>
+        <p style={{ fontSize: "0.8rem", opacity: 0.7, marginTop: "-0.4rem" }}>
+          El estado propuesto debe corresponder a la nueva conclusión de Valoración del informe, no a una intuición sin respaldo.
+        </p>
 
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           Voting duration (days)

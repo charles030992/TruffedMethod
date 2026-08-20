@@ -132,15 +132,27 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
         </label>
 
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Metadata URI (link a tu análisis)
+          Metadata URI (link a tu informe{" "}
+          <a
+            href="https://github.com/charles030992/truffhed-method"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#60a5fa" }}
+          >
+            Truffhed
+          </a>
+          )
           <input
             type="text"
             value={metadataURI}
             onChange={(e) => setMetadataURI(e.target.value)}
-            placeholder="https://... o ipfs://..."
+            placeholder="https://... o ipfs://... (informe .md con el análisis fundamental)"
             style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
           />
         </label>
+        <p style={{ fontSize: "0.8rem", opacity: 0.7, marginTop: "-0.4rem" }}>
+          El estado inicial debe corresponder a la conclusión de Valoración de ese informe (infravalorada → Value Investing, en precio → Trading, sobrevalorada → Overvalued).
+        </p>
 
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           Initial status

@@ -26,6 +26,18 @@ Contrato principal: `TruffedMethod.sol`
 - `vote(proposalId, support)` — 1 dirección = 1 voto, sí/no. Falla si la votación no ha empezado o ya terminó. Emite `VoteCast`.
 - `executeProposal(proposalId)` — solo tras cerrar la votación; requiere al menos 3 votos (`MIN_VOTES`) y ≥60% de apoyo. Si se cumple, actualiza el `status` de la empresa. Emite `ProposalExecuted`.
 
+Análisis fundamental (Truffhed)
+-------------------------------
+`metadataURI` (al crear una empresa) y `descriptionURI` (al crear una propuesta) están pensados para enlazar un informe de análisis fundamental, no para rellenarse a mano sin criterio. La metodología recomendada es **Truffhed** ([github.com/charles030992/truffhed-method](https://github.com/charles030992/truffhed-method)): value investing conservador (Buffett/Munger/Graham), scoring sobre 5 bloques, con regla de corte si la calidad es insuficiente.
+
+Flujo recomendado:
+1. Genera los datos financieros con `scripts/fetch_truffhed_data.py` de ese repo.
+2. Pide el análisis con la skill `truffhed-fundamental-review` (Fase 1 cualitativa + Fase 2 financiera) para obtener el informe en Markdown.
+3. Sube el informe donde prefieras (IPFS, gist, raw de GitHub) y usa esa URL como `metadataURI`/`descriptionURI`.
+4. El **estado inicial** de la empresa (o el estado propuesto) debe corresponder a la *conclusión de Valoración* del informe (infravalorada → Value Investing, en precio → Trading, sobrevalorada → Overvalued) — no a una intuición sin respaldo. Si el Score de Truffhed es ≤2, el método recomienda no valorar todavía; usa ese criterio antes de registrar la empresa.
+
+Esta conexión es todavía manual (copiar/pegar la URL) — no hay subida automática a IPFS integrada en el frontend.
+
 Quickstart (local)
 ------------------
 Requisitos: Node.js 18+, npm, Git
@@ -136,6 +148,18 @@ Core contract: `TruffedMethod.sol`
 - `createProposal(companyId, proposedStatus, descriptionURI, duration)` — opens a governance proposal to change a company's classification, with a `duration`-second voting window. Emits `ProposalCreated`.
 - `vote(proposalId, support)` — 1 address = 1 vote, yes/no. Reverts if voting hasn't started or already ended. Emits `VoteCast`.
 - `executeProposal(proposalId)` — only after the voting window closes; requires at least 3 votes (`MIN_VOTES`) and ≥60% support. Updates the company's `status` on success. Emits `ProposalExecuted`.
+
+Fundamental analysis (Truffhed)
+--------------------------------
+`metadataURI` (when creating a company) and `descriptionURI` (when creating a proposal) are meant to link a fundamental analysis report, not to be filled in without backing. The recommended methodology is **Truffhed** ([github.com/charles030992/truffhed-method](https://github.com/charles030992/truffhed-method)): conservative value investing (Buffett/Munger/Graham), a 5-block quality score, with a hard cutoff when quality is insufficient.
+
+Recommended flow:
+1. Generate the financial data with `scripts/fetch_truffhed_data.py` from that repo.
+2. Ask for the analysis using the `truffhed-fundamental-review` skill (qualitative Phase 1 + financial Phase 2) to get the Markdown report.
+3. Host the report wherever you prefer (IPFS, a gist, a raw GitHub URL) and use that URL as `metadataURI`/`descriptionURI`.
+4. The company's **initial status** (or the proposed status) should match the report's *Valuation conclusion* (undervalued → Value Investing, fairly priced → Trading, overvalued → Overvalued) — not an unsupported guess. If the Truffhed Score is ≤2, the method recommends not valuing yet; apply that before registering the company.
+
+This connection is still manual (copy/paste the URL) — there is no automatic IPFS upload built into the frontend.
 
 Quickstart (local)
 ------------------
