@@ -1,97 +1,8 @@
-import { useEffect, useState } from "react";
-import { usePublicClient } from "wagmi";
-import { TRUFFED_METHOD_ADDRESS, TRUFFED_METHOD_ABI } from "../contracts/truffedMethod";
-
-type Company = {
-  id: number;
-  ticker: string;
-  name: string;
-  sector: string;
-  status: number;
-  metadataURI: string;
-  createdBy: string;
-  exists: boolean;
-};
+import { useCompanies } from "../hooks/useCompanies";
+import { COMPANY_STATUS_LABELS } from "../contracts/companyStatus";
 
 export function CompanyList({ refreshSignal }: { refreshSignal?: unknown }) {
-  const publicClient = usePublicClient();
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      if (!publicClient) {
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const nextCompanyIdRaw = (await publicClient.readContract({
-          address: TRUFFED_METHOD_ADDRESS as `0x${string}`,
-          abi: TRUFFED_METHOD_ABI as any,
-          functionName: "nextCompanyId",
-          args: [],
-        })) as bigint;
-
-        const nextCompanyId = Number(nextCompanyIdRaw ?? 0n);
-
-        // According to the contract, nextCompanyId starts at 1 and increments;
-        // if nextCompanyId === 0 -> no companies
-        const count = nextCompanyId === 0 ? 0 : Math.max(0, nextCompanyId - 1);
-
-        if (count === 0) {
-          if (mounted) setCompanies([]);
-          return;
-        }
-
-        const ids = Array.from({ length: count }, (_, i) => i + 1);
-        const client = publicClient;
-
-        const results = await Promise.all(
-          ids.map(async (id) => {
-            const res = (await client.readContract({
-              address: TRUFFED_METHOD_ADDRESS as `0x${string}`,
-              abi: TRUFFED_METHOD_ABI as any,
-              functionName: "companies",
-              args: [BigInt(id)],
-            })) as any;
-
-            // ABI returns tuple-like result: map to our shape
-            const [cid, ticker, name, sector, status, metadataURI, createdBy, exists] = res;
-
-            return {
-              id: Number(cid ?? id),
-              ticker: String(ticker ?? ""),
-              name: String(name ?? ""),
-              sector: String(sector ?? ""),
-              status: Number(status ?? 0n),
-              metadataURI: String(metadataURI ?? ""),
-              createdBy: String(createdBy ?? ""),
-              exists: Boolean(exists),
-            } as Company;
-          })
-        );
-
-        if (mounted) setCompanies(results);
-      } catch (err: any) {
-        console.error("Error loading companies", err);
-        if (mounted) setError(String(err?.message ?? err));
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [publicClient, refreshSignal]);
+  const { companies, loading, error } = useCompanies(refreshSignal);
 
   return (
     <section style={{ marginTop: "1rem", border: "1px solid #333", borderRadius: 12, padding: "1rem" }}>
@@ -123,7 +34,7 @@ export function CompanyList({ refreshSignal }: { refreshSignal?: unknown }) {
                 <tr key={c.id} style={{ borderTop: "1px solid #2b2b2b" }}>
                   <td style={{ padding: "0.5rem", fontFamily: "monospace" }}>{c.ticker}</td>
                   <td style={{ padding: "0.5rem" }}>{c.name}</td>
-                  <td style={{ padding: "0.5rem" }}>{["Value","Trading","Overvalued"][c.status] ?? c.status}</td>
+                  <td style={{ padding: "0.5rem" }}>{COMPANY_STATUS_LABELS[c.status] ?? c.status}</td>
                   <td style={{ padding: "0.5rem" }}>{c.sector}</td>
                   <td style={{ padding: "0.5rem", fontFamily: "monospace" }}>{c.createdBy.slice(0,6)}...{c.createdBy.slice(-4)}</td>
                 </tr>

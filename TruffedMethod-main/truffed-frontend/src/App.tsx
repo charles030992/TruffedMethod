@@ -5,11 +5,14 @@ import { useAccount, useReadContract } from "wagmi";
 import { ConnectWallet } from "./components/ConnectWallet";
 import { CreateCompanyForm } from "./components/CreateCompanyForm";
 import { CompanyList } from "./components/CompanyList";
+import { CreateProposalForm } from "./components/CreateProposalForm";
+import { ProposalList } from "./components/ProposalList";
 import { TRUFFED_METHOD_ADDRESS, TRUFFED_METHOD_ABI } from "./contracts/truffedMethod";
 
 function App() {
   const { address } = useAccount();
   const [refreshSignal, setRefreshSignal] = useState(0);
+  const bump = () => setRefreshSignal((s) => s + 1);
 
   const { data: nextCompanyIdRaw } = useReadContract({
     address: TRUFFED_METHOD_ADDRESS,
@@ -86,15 +89,11 @@ function App() {
           </p>
         </section>
 
-        {/* ✅ Aquí va nuestro formulario para crear empresas */}
-        <CreateCompanyForm onCreate={() => setRefreshSignal((s) => s + 1)} />
-        <CompanyList refreshSignal={refreshSignal ?? nextCompanyIdRaw} />
+        <CreateCompanyForm onCreate={bump} />
+        <CompanyList refreshSignal={refreshSignal} />
 
-        {/* Más adelante añadiremos:
-            - Lista de empresas
-            - Formulario de propuestas
-            - Votaciones
-        */}
+        <CreateProposalForm refreshSignal={refreshSignal} onCreate={bump} />
+        <ProposalList refreshSignal={refreshSignal} onChanged={bump} />
       </main>
     </div>
   );

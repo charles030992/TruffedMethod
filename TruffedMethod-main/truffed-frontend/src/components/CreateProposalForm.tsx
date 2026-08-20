@@ -1,22 +1,27 @@
-// src/components/CreateCompanyForm.tsx
+// src/components/CreateProposalForm.tsx
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { TRUFFED_METHOD_ADDRESS, TRUFFED_METHOD_ABI } from "../contracts/truffedMethod";
 import { COMPANY_STATUS_TO_UINT } from "../contracts/companyStatus";
 import type { CompanyStatusKey } from "../contracts/companyStatus";
+import { useCompanies } from "../hooks/useCompanies";
 
-type CompanyStatus = CompanyStatusKey;
-
-export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
+export function CreateProposalForm({
+  refreshSignal,
+  onCreate,
+}: {
+  refreshSignal?: unknown;
+  onCreate?: () => void;
+}) {
   const { address } = useAccount();
+  const { companies } = useCompanies(refreshSignal);
   const { writeContractAsync, isPending, error } = useWriteContract();
 
-  const [ticker, setTicker] = useState("");
-  const [name, setName] = useState("");
-  const [sector, setSector] = useState("");
-  const [metadataURI, setMetadataURI] = useState("");
-  const [status, setStatus] = useState<CompanyStatus>("TRADING");
+  const [companyId, setCompanyId] = useState("");
+  const [proposedStatus, setProposedStatus] = useState<CompanyStatusKey>("VALUE");
+  const [descriptionURI, setDescriptionURI] = useState("");
+  const [durationDays, setDurationDays] = useState("3");
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -34,11 +39,12 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
     e.preventDefault();
 
     if (!address) {
-      alert("Conecta primero tu wallet para crear una empresa.");
+      alert("Conecta primero tu wallet para crear una propuesta.");
       return;
     }
 
-    if (!ticker || !name || !sector || !metadataURI) {
+    const days = Number(durationDays);
+    if (!companyId || !descriptionURI.trim() || !days || days <= 0) {
       alert("Por favor, rellena todos los campos.");
       return;
     }
@@ -47,26 +53,20 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
       const hash = await writeContractAsync({
         address: TRUFFED_METHOD_ADDRESS,
         abi: TRUFFED_METHOD_ABI as any,
-        functionName: "createCompany",
+        functionName: "createProposal",
         args: [
-          ticker.trim().toUpperCase(),
-          name.trim(),
-          sector.trim(),
-          metadataURI.trim(),
-          COMPANY_STATUS_TO_UINT[status],
+          BigInt(companyId),
+          COMPANY_STATUS_TO_UINT[proposedStatus],
+          descriptionURI.trim(),
+          BigInt(Math.floor(days * 86400)),
         ],
       });
 
       setTxHash(hash);
-
-      // Limpiar formulario
-      setTicker("");
-      setName("");
-      setSector("");
-      setMetadataURI("");
-      setStatus("TRADING");
+      setDescriptionURI("");
+      setDurationDays("3");
     } catch (err) {
-      console.error("Error creating company:", err);
+      console.error("Error creating proposal:", err);
     }
   }
 
@@ -81,15 +81,21 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
       }}
     >
       <h2 style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>
-        Create a new company
+        Create a new proposal
       </h2>
       <p style={{ fontSize: "0.9rem", opacity: 0.8, marginBottom: "1rem" }}>
-        Propose a new company with your fundamental analysis attached as a link.
+        Propose a status change for a registered company, backed by a link to your analysis.
       </p>
 
       {!address && (
         <p style={{ color: "#f97373", marginBottom: "1rem" }}>
-          🔌 Conecta tu wallet para poder crear empresas.
+          🔌 Conecta tu wallet para poder crear propuestas.
+        </p>
+      )}
+
+      {companies.length === 0 && (
+        <p style={{ opacity: 0.8, marginBottom: "1rem" }}>
+          No hay empresas registradas todavía. Crea una empresa antes de proponer un cambio de estado.
         </p>
       )}
 
@@ -98,55 +104,26 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
         style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
       >
         <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Ticker (ej: V, AAPL, TSLA)
-          <input
-            type="text"
-            value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
-            maxLength={10}
-            placeholder="V"
-            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
-          />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Company name
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Visa Inc."
-            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
-          />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Sector
-          <input
-            type="text"
-            value={sector}
-            onChange={(e) => setSector(e.target.value)}
-            placeholder="Payments, Tech, Energy..."
-            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
-          />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Metadata URI (link a tu análisis)
-          <input
-            type="text"
-            value={metadataURI}
-            onChange={(e) => setMetadataURI(e.target.value)}
-            placeholder="https://... o ipfs://..."
-            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
-          />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          Initial status
+          Company
           <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as CompanyStatus)}
+            value={companyId}
+            onChange={(e) => setCompanyId(e.target.value)}
+            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
+          >
+            <option value="">Select a company...</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.ticker} — {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Proposed status
+          <select
+            value={proposedStatus}
+            onChange={(e) => setProposedStatus(e.target.value as CompanyStatusKey)}
             style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
           >
             <option value="VALUE">Value Investing</option>
@@ -155,21 +132,49 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
           </select>
         </label>
 
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Description URI (link a tu justificación)
+          <input
+            type="text"
+            value={descriptionURI}
+            onChange={(e) => setDescriptionURI(e.target.value)}
+            placeholder="https://... o ipfs://..."
+            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
+          />
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          Voting duration (days)
+          <input
+            type="number"
+            min={1}
+            value={durationDays}
+            onChange={(e) => setDurationDays(e.target.value)}
+            style={{ padding: "0.4rem", borderRadius: "6px", border: "1px solid #555" }}
+          />
+        </label>
+
         <button
           type="submit"
-          disabled={isPending || isConfirming || !address}
+          disabled={isPending || isConfirming || !address || companies.length === 0}
           style={{
             marginTop: "0.5rem",
             padding: "0.6rem 1rem",
             borderRadius: "9999px",
             border: "none",
-            cursor: isPending || isConfirming || !address ? "not-allowed" : "pointer",
-            backgroundColor: isPending || isConfirming || !address ? "#555" : "#4ade80",
+            cursor:
+              isPending || isConfirming || !address || companies.length === 0
+                ? "not-allowed"
+                : "pointer",
+            backgroundColor:
+              isPending || isConfirming || !address || companies.length === 0
+                ? "#555"
+                : "#4ade80",
             color: "#000",
             fontWeight: 600,
           }}
         >
-          {isPending ? "Sending transaction..." : isConfirming ? "Confirming..." : "Create company"}
+          {isPending ? "Sending transaction..." : isConfirming ? "Confirming..." : "Create proposal"}
         </button>
       </form>
       {error && (
@@ -194,4 +199,3 @@ export function CreateCompanyForm({ onCreate }: { onCreate?: () => void }) {
     </div>
   );
 }
-
