@@ -1,5 +1,5 @@
 {
-  "name": "y",
+  "name": "truffedmethod-contracts",
   "version": "1.0.0",
   "scripts": {
     "compile": "npx hardhat compile",

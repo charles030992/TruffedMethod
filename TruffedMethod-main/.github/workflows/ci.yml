@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  contracts-tests:
+    name: Contracts tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install root deps
+        run: npm ci
+      - name: Run Hardhat tests
+        env:
+          ALCHEMY_SEPOLIA_URL: ${{ secrets.ALCHEMY_SEPOLIA_URL }}
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+        run: npx hardhat test --network hardhat
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    needs: contracts-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install frontend deps
+        run: |
+          cd truffed-frontend
+          npm ci
+      - name: Build frontend
+        env:
+          VITE_SEPOLIA_RPC_URL: ${{ secrets.VITE_SEPOLIA_RPC_URL }}
+        run: |
+          cd truffed-frontend
+          npm run build
